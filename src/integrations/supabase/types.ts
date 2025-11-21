@@ -32,6 +32,33 @@ export type Database = {
         }
         Relationships: []
       }
+      login_attempts: {
+        Row: {
+          attempted_at: string
+          id: string
+          ip_address: string | null
+          success: boolean
+          user_agent: string | null
+          user_email: string
+        }
+        Insert: {
+          attempted_at?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_email: string
+        }
+        Update: {
+          attempted_at?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_email?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string | null
@@ -162,32 +189,41 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_locked: boolean
           address: string | null
           city: string | null
           created_at: string | null
           first_name: string | null
           id: string
           last_name: string | null
+          locked_at: string | null
+          locked_reason: string | null
           phone: string | null
           updated_at: string | null
         }
         Insert: {
+          account_locked?: boolean
           address?: string | null
           city?: string | null
           created_at?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
+          locked_at?: string | null
+          locked_reason?: string | null
           phone?: string | null
           updated_at?: string | null
         }
         Update: {
+          account_locked?: boolean
           address?: string | null
           city?: string | null
           created_at?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
+          locked_at?: string | null
+          locked_reason?: string | null
           phone?: string | null
           updated_at?: string | null
         }
@@ -214,11 +250,45 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          purpose: string
+          used: boolean
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          purpose: string
+          used?: boolean
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          purpose?: string
+          used?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_recent_failed_attempts: {
+        Args: { user_email: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -226,9 +296,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_account_locked: { Args: { user_email: string }; Returns: boolean }
+      lock_account_after_failed_attempts: {
+        Args: { user_email: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "magazinier" | "finance"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -356,7 +431,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "magazinier", "finance"],
     },
   },
 } as const

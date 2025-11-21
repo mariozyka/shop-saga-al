@@ -1,24 +1,72 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate registration
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const firstName = formData.get('firstName') as string;
+    const lastName = formData.get('lastName') as string;
 
-    toast.success('Llogaria u krijua me sukses!');
-    setLoading(false);
+    try {
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: firstName,
+            last_name: lastName
+          }
+        }
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (authData.user) {
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        await supabase
+          .from('verification_codes')
+          .insert({
+            user_id: authData.user.id,
+            code: verificationCode,
+            purpose: 'email_verification'
+          });
+
+        // Send verification email
+        await supabase.functions.invoke('send-verification-email', {
+          body: { 
+            email, 
+            code: verificationCode,
+            firstName 
+          }
+        });
+
+        toast.success('Llogaria u krijua! Kontrolloni emailin për verifikim.');
+        navigate('/verify-email', { state: { email } });
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      toast.error(error.message || 'Gabim gjatë regjistrimit');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,6 +86,7 @@ const Register = () => {
                 <Label htmlFor="firstName">Emri</Label>
                 <Input
                   id="firstName"
+                  name="firstName"
                   placeholder="Emri"
                   required
                 />
@@ -47,6 +96,7 @@ const Register = () => {
                 <Label htmlFor="lastName">Mbiemri</Label>
                 <Input
                   id="lastName"
+                  name="lastName"
                   placeholder="Mbiemri"
                   required
                 />
@@ -57,6 +107,7 @@ const Register = () => {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="email@example.com"
                 required
@@ -67,6 +118,7 @@ const Register = () => {
               <Label htmlFor="password">Fjalëkalimi</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 placeholder="••••••••"
                 required
